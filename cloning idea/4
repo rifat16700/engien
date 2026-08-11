@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Clone: Profile & Entity Logic Matrix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        :root {
+            --bg-main: #0b0f19;
+            --card-bg: #161b2c;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --text-main: #f1f5f9;
+        }
+
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        .logic-tag {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .profile-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .tab-active {
+            border-bottom: 2px solid var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 250px;
+            margin: auto;
+        }
+
+        .indent-line {
+            border-left: 2px solid #2d3748;
+            margin-left: 10px;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <header class="max-w-6xl mx-auto mb-12 border-b border-slate-800 pb-6">
+        <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+            Profile & Entity Architecture (A-Z)
+        </h1>
+        <p class="text-slate-400 mt-2">প্রতিটি প্রোফাইল টাইপ, ইউজার রোল এবং পারমিশন ভিত্তিক বাটন-বাই-বাটন লজিক।</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto space-y-16">
+
+        <!-- SCENARIO 1: ANOTHER PERSON'S PROFILE -->
+        <section id="user-profile">
+            <div class="flex items-center gap-3 mb-6">
+                <span class="text-3xl">👤</span>
+                <h2 class="text-2xl font-bold">Scenario A: অন্যের ব্যক্তিগত প্রোফাইল (Private Chat)</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- UI Layout -->
+                <div class="profile-card rounded-3xl overflow-hidden p-6">
+                    <div class="flex flex-col items-center text-center mb-8">
+                        <div class="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full mb-4 flex items-center justify-center text-3xl font-bold">JD</div>
+                        <h3 class="text-xl font-bold">John Doe</h3>
+                        <p class="text-blue-400 text-sm">online</p>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <div class="grid grid-cols-4 gap-2 mb-8 border-y border-slate-700 py-4">
+                        <div class="text-center"><p class="text-lg">💬</p><p class="text-[10px] uppercase">Chat</p></div>
+                        <div class="text-center"><p class="text-lg">📞</p><p class="text-[10px] uppercase">Call</p></div>
+                        <div class="text-center"><p class="text-lg">📹</p><p class="text-[10px] uppercase">Video</p></div>
+                        <div class="text-center"><p class="text-lg">🔔</p><p class="text-[10px] uppercase">Mute</p></div>
+                    </div>
+
+                    <!-- Info List -->
+                    <div class="space-y-6">
+                        <div class="flex justify-between border-b border-slate-800 pb-3">
+                            <div><p class="text-xs text-slate-500">Bio</p><p class="text-sm">Software Architect & Minimalist</p></div>
+                            <span class="text-slate-600">ⓘ</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-800 pb-3">
+                            <div><p class="text-xs text-slate-500">Phone</p><p class="text-sm">+880 17XX-XXXXXX</p></div>
+                            <span class="text-slate-600">📱</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <div><p class="text-xs text-slate-500">Username</p><p class="text-sm">@johndoe_arch</p></div>
+                            <span class="text-slate-600">@</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logic Breakdown -->
+                <div class="space-y-6">
+                    <div class="bg-blue-900/10 p-5 rounded-2xl border border-blue-500/20">
+                        <h4 class="font-bold text-blue-400 mb-2">Technical Trigger & Initialization:</h4>
+                        <p class="text-sm text-slate-300 leading-relaxed">
+                            যখন আপনি কারো চ্যাট লিস্ট বা কন্টাক্ট থেকে প্রোফাইলে ক্লিক করেন, অ্যাপটি প্রথমে <code class="logic-tag">getChat(chat_id)</code> কল করে। কিন্তু প্রোফাইলের পূর্ণাঙ্গ ডাটা (Bio, Shared Media count) পাওয়ার জন্য <code class="logic-tag">getUserFullInfo(user_id)</code> কল করতে হয়।
+                        </p>
+                    </div>
+
+                    <div class="indent-line">
+                        <h5 class="font-bold mb-3">কি কি অপশন দেখাবে?</h5>
+                        <ul class="space-y-3 text-sm">
+                            <li class="flex items-start gap-2">
+                                <span class="text-blue-500">▶</span>
+                                <div><strong>Shared Media Tabs:</strong> Photos, Videos, Files, Links, Voice, GIFs. প্রতিটি ট্যাব আলাদাভাবে <code class="logic-tag">searchChatMessages</code> দিয়ে ফিল্টার করা হয়।</div>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-blue-500">▶</span>
+                                <div><strong>Groups in Common:</strong> আপনি এবং ওই ইউজার আর কোন কোন গ্রুপে একসাথে আছেন। <br><span class="logic-tag">getGroupsInCommon(user_id)</span></div>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-blue-500">▶</span>
+                                <div><strong>More Menu (Three Dots):</strong> Block User, Share Contact, Edit Contact, Delete Chat, Start Secret Chat.</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCENARIO 2: OWN CHANNEL PROFILE (ADMIN VIEW) -->
+        <section id="own-channel">
+            <div class="flex items-center gap-3 mb-6">
+                <span class="text-3xl">📢</span>
+                <h2 class="text-2xl font-bold">Scenario B: নিজের চ্যানেলের প্রোফাইল (Administrator)</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- UI Skeleton -->
+                <div class="profile-card rounded-3xl p-6 relative">
+                    <button class="absolute top-6 right-6 p-2 bg-blue-600 rounded-full text-xs">✎ Edit</button>
+                    
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center text-2xl font-bold">TC</div>
+                        <div>
+                            <h3 class="text-xl font-bold">Tech Channel [Owner]</h3>
+                            <p class="text-slate-400 text-xs">15.4K subscribers</p>
+                        </div>
+                    </div>
+
+                    <!-- Admin Quick Actions -->
+                    <div class="grid grid-cols-3 gap-4 mb-8">
+                        <div class="bg-slate-800 p-3 rounded-xl text-center">
+                            <p class="text-blue-400 font-bold">📈</p>
+                            <p class="text-[10px] mt-1">Stats</p>
+                        </div>
+                        <div class="bg-slate-800 p-3 rounded-xl text-center">
+                            <p class="text-blue-400 font-bold">🕒</p>
+                            <p class="text-[10px] mt-1">Recent Actions</p>
+                        </div>
+                        <div class="bg-slate-800 p-3 rounded-xl text-center">
+                            <p class="text-blue-400 font-bold">👤+</p>
+                            <p class="text-[10px] mt-1">Add Member</p>
+                        </div>
+                    </div>
+
+                    <!-- Admin List Items -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-lg cursor-pointer">
+                            <div class="flex items-center gap-3"><span>👥</span><p class="text-sm">Subscribers</p></div>
+                            <p class="text-xs text-slate-500">15,402</p>
+                        </div>
+                        <div class="flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-lg cursor-pointer">
+                            <div class="flex items-center gap-3"><span>🛡️</span><p class="text-sm">Administrators</p></div>
+                            <p class="text-xs text-slate-500">4</p>
+                        </div>
+                        <div class="flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-lg cursor-pointer border-t border-slate-800 pt-2">
+                            <div class="flex items-center gap-3"><span>🚫</span><p class="text-sm text-red-400">Removed Users</p></div>
+                            <p class="text-xs text-slate-500">12</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logic Breakdown -->
+                <div class="space-y-6">
+                    <div class="bg-purple-900/10 p-5 rounded-2xl border border-purple-500/20">
+                        <h4 class="font-bold text-purple-400 mb-2">Admin Hierarchy Logic:</h4>
+                        <p class="text-sm text-slate-300 leading-relaxed">
+                            নিজস্ব চ্যানেলের ক্ষেত্রে অ্যাপটি <code class="logic-tag">getSupergroupFullInfo(supergroup_id)</code> ব্যবহার করে। এখানে <code>can_get_statistics</code> এবং <code>can_view_recent_actions</code> বুলিয়ান চেক করে বাটনগুলো রেন্ডার হয়।
+                        </p>
+                    </div>
+
+                    <div class="indent-line">
+                        <h5 class="font-bold mb-3">কেন এই অপশনগুলো আলাদা?</h5>
+                        <ul class="space-y-3 text-sm">
+                            <li class="flex items-start gap-2">
+                                <span class="text-purple-500">▶</span>
+                                <div><strong>Edit (The Pencil):</strong> এখানে ক্লিক করলে চ্যানেল নাম, ফটো, ডেসক্রিপশন, এবং চ্যানেল টাইপ (Public/Private) পরিবর্তন করার স্ক্রিন আসে। <br><span class="logic-tag">setChatTitle</span>, <span class="logic-tag">setChatDescription</span></div>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-purple-500">▶</span>
+                                <div><strong>Recent Actions:</strong> গত ৪৮ ঘণ্টায় এডমিনরা কি কি করেছে (মেসেজ ডিলিট, মেম্বার এড) তার একটি পূর্ণাঙ্গ লগ। <br><span class="logic-tag">getChatEventLog</span></div>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-purple-500">▶</span>
+                                <div><strong>Invite Links:</strong> নতুন ইনভাইট লিঙ্ক তৈরি এবং কিউআর কোড জেনারেট করা। <br><span class="logic-tag">createChatInviteLink</span></div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCENARIO 3: EXTERNAL CHANNEL (SUBSCRIBER VIEW) -->
+        <section id="external-channel">
+            <div class="flex items-center gap-3 mb-6">
+                <span class="text-3xl">📡</span>
+                <h2 class="text-2xl font-bold">Scenario C: অন্যের চ্যানেলের প্রোফাইল (Subscriber)</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- UI Comparison -->
+                <div class="profile-card rounded-3xl p-6">
+                    <div class="flex flex-col items-center mb-8">
+                        <div class="w-20 h-20 bg-slate-700 rounded-full mb-4"></div>
+                        <h3 class="text-xl font-bold">Global News Portal</h3>
+                        <p class="text-slate-500 text-xs italic">Public Channel</p>
+                    </div>
+
+                    <!-- Subscriber Actions -->
+                    <div class="flex gap-2 mb-8">
+                        <button class="flex-1 bg-slate-800 py-3 rounded-xl flex items-center justify-center gap-2">
+                            <span>🔔</span> Mute
+                        </button>
+                        <button class="flex-1 bg-slate-800 py-3 rounded-xl flex items-center justify-center gap-2">
+                            <span>🔍</span> Search
+                        </button>
+                        <button class="flex-1 bg-red-900/20 text-red-400 py-3 rounded-xl flex items-center justify-center gap-2 border border-red-900/30">
+                            <span>🚪</span> Leave
+                        </button>
+                    </div>
+
+                    <!-- Limited Content -->
+                    <div class="space-y-4">
+                        <p class="text-sm text-slate-400 px-2 leading-relaxed">
+                            Latest world news, breaking stories, and deep analysis from our global team of journalists. 
+                        </p>
+                        <div class="flex items-center gap-2 p-3 bg-blue-900/10 rounded-xl">
+                            <span class="text-blue-400">🔗</span>
+                            <p class="text-sm text-blue-300">t.me/global_news_portal</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logic Breakdown -->
+                <div class="space-y-6">
+                    <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
+                        <h4 class="font-bold text-slate-400 mb-2">Restricted Access Logic:</h4>
+                        <p class="text-sm text-slate-300 leading-relaxed">
+                            অন্যের চ্যানেলে ইউজার শুধুমাত্র <code class="logic-tag">chatMemberStatusMember</code> হিসেবে থাকে। এখানে এডমিন লিস্ট বা সাবস্ক্রাইবার লিস্ট দেখার পারমিশন সার্ভার সাইড থেকে ব্লক থাকে।
+                        </p>
+                    </div>
+
+                    <div class="indent-line">
+                        <h5 class="font-bold mb-3">ইউজার কি কি দেখবে?</h5>
+                        <ul class="space-y-3 text-sm">
+                            <li class="flex items-start gap-2">
+                                <span class="text-slate-500">▶</span>
+                                <div><strong>Notification Settings:</strong> শুধুমাত্র ওই চ্যানেলের জন্য নোটিফিকেশন অফ/অন করা। <br><span class="logic-tag">setChatNotificationSettings</span></div>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-slate-500">▶</span>
+                                <div><strong>Shared Content:</strong> চ্যানেলের শুরু থেকে আজ পর্যন্ত পাঠানো সব মিডিয়া।</div>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-slate-500">▶</span>
+                                <div><strong>Report:</strong> চ্যানেলটির বিরুদ্ধে রিপোর্ট (Spam, Violence, etc.) করার অপশন। <br><span class="logic-tag">reportChat</span></div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SHARED MEDIA ARCHITECTURE -->
+        <section id="shared-media" class="border-t border-slate-800 pt-16">
+            <h2 class="text-2xl font-bold text-center mb-10">Shared Media & Storage Architecture</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <div class="chart-container">
+                        <canvas id="mediaChart"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <h3 class="text-xl font-semibold">কিভাবে ডাটা লোড হয়?</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">
+                        টেলিগ্রাম প্রোফাইলের নিচে মিডিয়া ট্যাবগুলো কখনোই একবারে সব ডাটা লোড করে না। এটি একটি "Lazy Loading" প্যাটার্ন অনুসরণ করে।
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="p-4 bg-slate-800/40 rounded-2xl">
+                            <p class="font-bold text-blue-400 text-sm">1. Chunk-based Fetching</p>
+                            <p class="text-xs text-slate-500">প্রথমে শেষ ২০টি মিডিয়া আইটেম <code class="logic-tag">searchChatMessages</code> দিয়ে আনা হয়। স্ক্রল করলে আরও ২০টি করে কুয়েরি হয়।</p>
+                        </li>
+                        <li class="p-4 bg-slate-800/40 rounded-2xl">
+                            <p class="font-bold text-blue-400 text-sm">2. Local vs Remote Cache</p>
+                            <p class="text-xs text-slate-500">ছবি বা ভিডিওর থাম্বনেইল প্রথমে লোকাল SQLite ডাটাবেস থেকে চেক করা হয়। না থাকলে <code class="logic-tag">downloadFile</code> ট্রিগার হয়।</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="max-w-6xl mx-auto mt-20 border-t border-slate-800 pt-10 text-center pb-20">
+        <p class="text-slate-500 text-sm">এটি "Profile & Entity" মডিউলের বাটন-বাই-বাটন টেকনিক্যাল রিসার্চ।</p>
+        <div class="flex justify-center gap-4 mt-6">
+            <button class="px-6 py-2 bg-slate-800 rounded-full text-xs hover:bg-slate-700">Go to Settings Logic</button>
+            <button class="px-6 py-2 bg-blue-600 rounded-full text-xs hover:bg-blue-500 font-bold">Next: Calls & Signaling →</button>
+        </div>
+    </footer>
+
+    <script>
+        // Media Distribution Chart
+        const ctx = document.getElementById('mediaChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Photos', 'Videos', 'Files', 'Music', 'Voice', 'Links'],
+                datasets: [{
+                    data: [45, 25, 10, 5, 10, 5],
+                    backgroundColor: [
+                        '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#94a3b8', font: { size: 10 } }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+name: tdlib_example
+description: NCHAT - A high-performance Telegram client built with TDLib.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  tdlib: ^1.6.0
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # Storage & Files
+  path_provider: ^2.1.6
+  path: ^1.9.0
+  shared_preferences: ^2.3.2
+
+  # Audio — PTT & Voice Notes
+  record: ^7.1.1
+  just_audio: ^0.9.46
+  audio_session: ^0.1.25
+
+  # Background Service (Walkie-Talkie)
+  flutter_background_service: ^5.0.10
+  flutter_local_notifications: ^18.0.1
+
+  # Files & Media
+  file_picker: ^8.1.6
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+  photo_view: ^0.15.0
+  open_filex: ^4.4.0
+
+  # Utilities
+  uuid: ^4.4.0
+  intl: ^0.20.3
+  shimmer: ^3.0.0
+  collection: ^1.18.0
+  equatable: ^2.0.5
+
+  # UI
+  flutter_svg: ^2.0.10+1
+  google_fonts: ^6.2.1
+
+  cupertino_icons: ^1.0.8
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  riverpod_generator: ^2.4.3
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/

@@ -1,0 +1,357 @@
+Architectural Blueprint and Software Requirements Specification: Production-Grade Messaging System
+Executive System Architecture and Technical Foundation
+The deployment of a high-performance, secure, and infinitely scalable real-time messaging application necessitates a sophisticated architectural foundation. This document serves as the exhaustive Software Requirements Specification (SRS) and architectural blueprint for a production-ready messaging platform built using the Flutter framework and the official Telegram Database Library (TDLib). The objective is to establish a rigorous, granular framework detailing every user interface component, functional state transition, and the precise C++ TDLib constructors required to manifest the application.
+
+At the core of this architecture is an asynchronous, event-driven state machine. The Flutter frontend, executing on the Dart main UI isolate, relies strictly on declarative rendering and reactive state management architectures (such as BLoC or Riverpod). The frontend does not maintain core business logic, cryptographic key exchanges, or network sockets. Instead, the heavy lifting of local SQLite database management, asynchronous caching, end-to-end encryption, network synchronization, and multi-threaded request handling is delegated entirely to the underlying C++ TDLib instance.
+
+Communication between the Dart layer and the C++ binary is facilitated via Dart Foreign Function Interface (FFI) bindings using JSON serialization. A dedicated background isolate continuously polls the TDLib client using receive(waitTimeout: 10), intercepting an unbroken stream of updates. Requests from the UI are dispatched via the send method, and responses are asynchronously matched to their originating requests using the @extra and client_id fields. This deliberate decoupling ensures that the Flutter UI maintains a pristine 60-120 frames per second (fps) rendering pipeline, immune to the latency of cryptographic computations or network unreliability.
+
+MODULE 1: Authentication & Onboarding
+The authentication module operates as a finite state machine, dictated entirely by TDLib’s AuthorizationState update stream. The user interface is a direct, reactive reflection of the authorization state object currently emitted by the client, ensuring that the local application state is perfectly synchronized with the remote server.
+
+Phone Number Input and Initialization
+UI/UX Vision:
+Upon initial launch, the user is greeted by a pristine, minimalist onboarding screen utilizing a Scaffold with a subtle, computationally inexpensive background particle animation. A primary text field is presented for phone number input. To the left of this input, a dropdown menu displays a national flag and country code. The field employs aggressive input formatters to dynamically inject spaces and hyphens based on international telecom standards (E.164 format) as the user types. A floating action button (FAB) containing a forward arrow rests at the bottom right, pulsating gently when the phone number length satisfies the chosen country's regex requirements.
+
+Functional Action:
+When the FAB is engaged, the application locks the input field, dismisses the on-screen keyboard, and displays a circular progress indicator. The system first assesses whether the local client parameters have been initialized. Once initialized, it submits the sanitized phone number string to the backend. The application must handle potential rate-limiting errors gracefully, displaying localized toast notifications if the user attempts submission too rapidly.
+
+TDLib Logic & Methods:
+The TDLib client first broadcasts an authorizationStateWaitTdlibParameters event. The architecture responds by dispatching a setTdlibParameters request, injecting the api_id, api_hash, system language, and device information. Subsequently, TDLib transitions the state, emitting an authorizationStateWaitPhoneNumber event. The system then invokes the setAuthenticationPhoneNumber function, passing the internationalized string into the phone_number_ field.
+
+OTP Verification (SMS, Telegram App, Call)
+UI/UX Vision:
+The screen transitions via a fluid, physics-based lateral slide animation. The UI presents a large, monospace typography row of five or six dashes representing the One-Time Password (OTP) fields. A countdown timer ticks down below the input. If the user possesses the official application active on another device, the UI explicitly states, "We've sent a code to your other devices." An alternative button, "Send via SMS," appears dynamically if the initial delivery method was an in-app message and the timeout expires.
+
+Functional Action:
+The application awaits the user to input the digits, automatically shifting focus to the next dash as each number is typed. If platform permissions (Android SMS Retriever API or iOS AutoFill) allow, a background listener automatically intercepts the incoming code, populates the text fields, and triggers an automatic validation request without requiring a manual button press. If the code is incorrect, a rapid horizontal shake animation provides tactile error feedback.
+
+TDLib Logic & Methods:
+Upon successful phone number submission, TDLib updates the global state to authorizationStateWaitCode. The incoming event payload contains an authenticationCodeInfo object, which details the exact type of code transmitted. The presentation layer evaluates this type to adjust the UI—checking if it is an authenticationCodeTypeTelegramMessage (sent via the MTProto cloud connection), an authenticationCodeTypeSms (standard carrier text), or an authenticationCodeTypeCall (voice call). When the code is acquired, the frontend dispatches checkAuthenticationCode to validate the input.
+
+2FA (Two-Step Verification) Password
+UI/UX Vision:
+For accounts secured with 2FA, the OTP screen dissolves into a password entry view. An animated padlock icon locks securely at the top of the screen. A single, masked text field accepts alphanumeric characters, with a "toggle visibility" eye icon resting inside the field. Below the primary input, a desaturated text link reads "Forgot password?", which becomes active only if the account has a configured recovery email.
+
+Functional Action:
+The user inputs their cloud password. If the user taps "Forgot password?", the flow switches to an email recovery pipeline, hiding the password field and asking for an email verification code.
+
+TDLib Logic & Methods:
+If a password is required, the checkAuthenticationCode success event is bypassed, and TDLib immediately issues an authorizationStateWaitPassword update. The application collects the user's string and submits it via checkAuthenticationPassword. If the user opts for recovery, the system invokes recoverAuthenticationPassword, triggering an email containing a recovery code. Once received, the application sends checkPasswordRecoveryCode to bypass the lock.
+
+QR Code Login for Web/Desktop Style Linking
+UI/UX Vision:
+When a secondary client (desktop or tablet) initializes, the UI bypasses the phone number input and displays a large, high-contrast QR code centered on the screen. The surrounding UI instructs the user to open the mobile application, navigate to "Devices," and scan the code. The QR code features a visual sweeping scanner animation and dynamically refreshes every few seconds to prevent replay attacks.
+
+Functional Action:
+The application continuously polls for authorization without requiring manual user input. Once the mobile device successfully scans the code and confirms the session, the QR screen immediately dismisses via a fade-out transition, replacing itself with the main chat dashboard.
+
+TDLib Logic & Methods:
+The secondary client receives authorizationStateWaitPhoneNumber. Instead of submitting a number, it invokes requestQrCodeAuthentication. TDLib then shifts the state to authorizationStateWaitOtherDeviceConfirmation, providing a secure link string within the state object. The UI generates a QR graphic from this string. Once the primary device approves the link, TDLib automatically pushes an authorizationStateReady event, signaling the completion of the onboarding matrix.
+
+Authorization State Event	Trigger Condition	Required UI Action	Required TDLib Method
+authorizationStateWaitTdlibParameters	First boot / Uninitialized	Show loading / Splash	setTdlibParameters
+authorizationStateWaitPhoneNumber	Parameters set, no session	Show phone input / QR	setAuthenticationPhoneNumber or requestQrCodeAuthentication
+authorizationStateWaitCode	Phone number accepted	Show OTP input	checkAuthenticationCode
+authorizationStateWaitPassword	2FA enabled on account	Show password input	checkAuthenticationPassword
+authorizationStateWaitOtherDeviceConfirmation	QR authentication requested	Render QR code graphic	Wait for external scan approval
+authorizationStateReady	Auth matrix complete	Route to Dashboard	N/A (Begin fetching chats)
+MODULE 2: Main Dashboard & Navigation
+The dashboard serves as the central orchestration hub. It demands rigorous memory management, utilizing Flutter's Sliver architecture to ensure lazy-loaded image caching and instantaneous reactive updates to chat lists, even when processing thousands of concurrent database modifications.
+
+Top Bar: Global Search & Stories UI
+UI/UX Vision:
+The SliverAppBar shrinks seamlessly upon downward scrolling, maximizing vertical screen real estate for the chat list. A magnifying glass icon resides in the top right. When tapped, the app bar morphs via a Hero transition into a full-width text input field, revealing a recent search history drop-down. Directly beneath the app bar, a horizontal, swipeable ListView displays user Stories. Each story is represented by a circular profile picture encased in a vibrant, gradient-colored ring (unviewed) or a muted grey ring (viewed). A specific tile with a "+" icon overlays the current user's avatar, inviting them to add a story.
+
+Functional Action:
+Typing in the search bar dynamically filters the local SQLite database for matching strings across all chats, contacts, and public usernames. The search executes with debounce logic (e.g., 300ms) to prevent thread blocking. Tapping a story expands it into a full-screen vertical page viewer, pausing the auto-advance timer if the user presses and holds the screen.
+
+TDLib Logic & Methods:
+Global search utilizes the searchChatMessages method, paired with a searchMessagesFilter to narrow down media types, users, or text. To fetch and monitor stories, the application subscribes to activeStoryStateLive and activeStoryStateRead events to determine the Boolean state that drives the color of the UI ring. Adding a story invokes createStoryAlbum.
+
+Chat Folders/Tabs
+UI/UX Vision:
+A TabBar rests below the Stories UI, featuring categories such as "All Chats," "Unread," "Personal," and "Work." The user can swipe left or right across the main viewport to paginate between these folders. The active tab indicator is an animated container that stretches and shrinks dynamically during the swipe gesture, snapping to the center of the selected tab.
+
+Functional Action:
+Swiping changes the active chat list filter. Users can long-press a tab to invoke a context menu, allowing them to reorder tabs or create a new custom folder, defining precisely which chat types (groups, bots, channels) or specific users belong inside the filter.
+
+TDLib Logic & Methods:
+The system populates default tabs using getRecommendedChatFolders. The backend folders are defined by chatFolder objects. When a user creates a new tab, the UI builds a chatFilter and commits it to the database, allowing TDLib to manage the routing of incoming messages to the correct folder arrays. Reordering utilizes reorderChatFolders to synchronize the layout state across devices.
+
+Chat List: Badges, Indicators, and Swipe Actions
+UI/UX Vision:
+The primary ListView.builder renders individual chat tiles. Each tile contains a circular avatar, the chat title, a localized timestamp, and a two-line preview of the latest message. Unread messages display a solid circular badge with a numeric count. If the user is typing, the message preview is replaced by a localized "Typing..." text alongside a looping ellipsis animation. Read receipts manifest as single (sent) or double (read) blue checkmarks. Swiping a tile to the left reveals an underlying contextual menu block with dynamic icons that stretch based on the swipe distance (Archive, Mute, Delete, Pin).
+
+Functional Action:
+The chat list acts as a reactive stream. Tiles dynamically re-sort themselves to the top of the list in O(1) time when a new message arrives, unless a chat is pinned (which anchors it permanently at the top). Swiping past a specific pixel threshold auto-executes the primary action (archive), physically removing the tile from the primary list with a collapsing size animation.
+
+TDLib Logic & Methods:
+The list subscribes to TDLib update events. Typing indicators are driven by updateChatAction streams, specifically intercepting chatActionTyping and chatActionRecordingVoiceNote. Read receipts are handled by tracking the last_read_inbox_message_id and last_read_outbox_message_id against the last_message ID. Pinning a chat invokes toggleChatIsPinned. Archiving a chat utilizes the archiveChatListSettings and maps the chat to the chatListArchive enumeration rather than chatListMain.
+
+Swipe Action	UI Feedback	TDLib Invocation
+Archive	Tile slides out, grey icon	Map chat to chatListArchive via archiveChatListSettings
+Pin / Unpin	Tile anchors to top, thumbtack icon	toggleChatIsPinned
+Mute / Unmute	Speaker icon toggles slash	setNotificationSettings
+Delete	Red background, confirmation dialog	deleteChatHistory
+Floating Action Button (FAB)
+UI/UX Vision:
+A material FAB sits at the bottom right of the dashboard. Tapping it triggers a rapid radial expansion animation or a modal bottom sheet containing options: "New Private Chat," "New Secret Chat," "New Group," and "New Channel." The FAB hides itself when the user scrolls down to maximize viewing space and reappears upon scrolling up.
+
+Functional Action:
+Selecting an option pushes a contact selection screen. For a Secret Chat, an end-to-end encryption key exchange is initiated in the background, and the UI displays a green padlock icon next to the user's name to denote cryptographic security.
+
+TDLib Logic & Methods:
+Selecting a standard contact calls createPrivateChat. Creating a secure enclave calls createNewSecretChat. The application waits for TDLib to emit a secretChatStateReady event, ensuring the Diffie-Hellman key exchange is complete before allowing text input. Creating groups relies on createNewSupergroupChat.
+
+Drawer/Menu
+UI/UX Vision:
+A swipe from the left edge of the screen (or tapping the hamburger icon) pulls out a navigation drawer. The top header displays the user's profile photo, name, and phone number against a themed background. A small downward chevron allows the user to expand an accordion menu displaying multiple logged-in accounts. The body of the drawer contains navigation items like "Saved Messages," "Contacts," "Calls," and "Settings."
+
+Functional Action:
+Tapping an alternate account instantly swaps the active session without requiring a password or reloading the application shell. Tapping "Saved Messages" routes the user to a private cloud storage chat with themselves. Tapping the profile summary routes directly to the Module 5 settings screen.
+
+TDLib Logic & Methods:
+The drawer queries the current user's profile using getMe. Switching accounts leverages TDLib's ability to run multiple clients concurrently within the same process. The Dart layer manages a map of active client_ids. Swapping accounts simply updates the active UI pointer to a different client_id, routing all subsequent API calls and FFI listeners to that specific TDLib instance.
+
+MODULE 3: The Chat Interface (Core)
+The chat interface represents the most performance-critical module of the application, requiring highly optimized layout calculations to render variable-height message bubbles, embedded media, and real-time interaction states seamlessly without dropping frames.
+
+App Bar: User Status & Call Buttons
+UI/UX Vision:
+The chat App Bar displays the contact's avatar, name, and their presence status directly underneath (e.g., "online," "last seen recently," "typing..."). The right side of the App Bar houses a telephone icon for voice calls and a video camera icon for video calls. Tapping the header area expands a detailed profile view containing shared media, links, and documents.
+
+Functional Action:
+The status text evaluates local time against the server timestamp to display relative strings (e.g., "last seen 5 minutes ago"). Initiating a call dims the screen and pushes a full-screen calling UI with a heavily blurred background of the user's avatar.
+
+TDLib Logic & Methods:
+The presence engine relies on userStatus updates (e.g., userStatusOnline, userStatusOffline). When a user initiates a call, the system dispatches createCall or createVideoChat, passing the target user_id. The client then transitions through call states such as callStatePending and eventually callStateReady to establish the WebRTC peer-to-peer or relay connection using the exchanged cryptographic payloads.
+
+Message Input Area & Attachments
+UI/UX Vision:
+The bottom of the screen features a dynamic text field that expands vertically as text wraps, up to a maximum of six lines before scrolling internally. To the left is an emoji icon; tapping it replaces the system keyboard with a custom, highly optimized grid rendering system emojis, stickers, and GIFs. To the right of the text field is a paperclip icon. Tapping the paperclip summons an animated bottom sheet grid displaying options for Gallery, File, Location, Contact, and Polls.
+
+Functional Action:
+Selecting an image from the gallery populates a horizontal preview strip above the text field. The user can add a caption, crop, or apply markup before pressing the send arrow. Adding a poll changes the input completely, requiring question and answer fields.
+
+TDLib Logic & Methods:
+Standard text dispatch utilizes sendMessage. When the user is interacting with the keyboard, the app repeatedly sends sendChatAction with chatActionTyping. The sticker menu is populated by fetching getAttachedStickerSets. For attachments, the application constructs distinct input objects based on the payload:
+
+Attachment Type	TDLib Input Constructor
+Gallery Image/Video	inputMessagePhoto / inputMessageVideo
+Standard File/Document	inputMessageDocument
+GPS Location	inputMessageLocation
+vCard Contact	inputMessageContact
+Interactive Poll	inputMessagePoll
+PTT & PTV (Push-to-Talk / Push-to-Video)
+UI/UX Vision:
+If the text field is completely empty, the send button is replaced by a microphone icon. A swift tap switches the microphone to a camera icon (PTV). Pressing and holding the microphone initiates voice recording. A red pulsating dot appears, alongside a timer and a dynamic audio waveform visualizer that reacts to microphone input volume. Swiping the finger left reveals a trash can icon to cancel. Swiping up locks the recording, allowing hands-free dictation.
+
+Functional Action:
+While locked, the user can press a stop button to preview the audio, scrubbing through the timeline before sending. The audio must be highly compressed to save bandwidth while maintaining voice clarity.
+
+TDLib Logic & Methods:
+Initiating a press triggers chatActionRecordingVoiceNote or chatActionUploadingVideoNote. The application uses native platform channels to capture audio from the microphone, encoding it into the Opus codec within an OGG container. Upon completion, the file is passed to TDLib to construct a VoiceNote object, capturing the file path, duration, and an optional 5-bit waveform string used to render the visualizer inside the message bubble.
+
+Message Bubbles & Formatting
+UI/UX Vision:
+Messages from the current user are rendered in right-aligned, accent-colored bubbles with a subtle bottom-right tail. Incoming messages are left-aligned in neutral grey bubbles. The text parser identifies URLs in real-time, converting them into clickable links that auto-generate a rich preview block (image, title, description) at the bottom of the bubble. Markdown styling allows for bold, italic, strikethrough, monospace, and spoiler text. Spoilers are obfuscated by a shimmering, pixelated particle shader that dissolves smoothly upon tapping. Quotes and replies appear as indented blocks above the text with a vertical accent line colored to match the original sender's profile color.
+
+Functional Action:
+Tapping a link preview opens an in-app browser or routes to the native application. Tapping a spoiler permanently reveals it for that session. Tapping a quote reply auto-scrolls the view up to the original message, flashing the background briefly.
+
+TDLib Logic & Methods:
+Text formatting is handled via formattedText objects containing arrays of textEntity objects. These entities denote the exact byte offsets and lengths of specific styles (e.g., textEntityTypeSpoiler, textEntityTypeBold). Rich link previews are managed internally by TDLib via getWebPagePreview. When sending a reply, the system populates the inputMessageReplyTo field within the sendMessage call, linking the new message to a historical message_id.
+
+Message Actions (Reactions, Reply, Forward, Copy, Edit, Delete)
+UI/UX Vision:
+Executing a long-press on a message bubble scales the bubble down slightly, applying a Gaussian blur to the surrounding Scaffold via Flutter's BackdropFilter. A floating, curved container springs above the bubble, showcasing popular animated emojis for quick reactions. An iOS-style vertical context menu unrolls below, presenting options: Reply, Forward, Copy, Edit, Pin, and Delete.
+
+Functional Action:
+Tapping an emoji instantly affixes it to the bottom-right corner of the message bubble with a bouncing spring animation. Selecting "Copy" writes the string to the platform clipboard and triggers a brief snackbar. Selecting "Edit" transitions the main input bar into an "Editing" mode, displaying the original text and an "X" to cancel. Deleting provides an alert dialog offering to "Delete for me" or "Delete for everyone" (if within the permissible time window).
+
+TDLib Logic & Methods:
+Applying a reaction invokes addMessageReaction, while removing it requires removeMessageReaction. Modifying text requires the editMessageText function. Removing a message completely calls deleteMessages, passing an array of message_ids and a boolean flag (revoke) determining if the deletion propagates to the remote peer's device. To clear full chat histories, the UI relies on deleteChatHistory.
+
+Special Messages (Scheduled & Silent)
+UI/UX Vision:
+A long-press on the final "Send" arrow brings up a minimal tooltip menu: "Schedule Message" and "Send Without Sound." Selecting schedule opens an iOS-style wheel picker (or Android Material DatePicker) for date and time.
+
+Functional Action:
+Scheduled messages do not appear in the main chat thread immediately. Instead, a small calendar icon appears in the input bar. Tapping it navigates to a dedicated "Scheduled Messages" view where pending dispatches can be modified, rescheduled, or sent immediately.
+
+TDLib Logic & Methods:
+The system populates the sendMessageOptions parameter in the sendMessage call. For silent delivery, the disable_notification flag is set to true. For deferred sending, the scheduling_state is populated with messageSchedulingStateSendAtDate, converting the user's UI time into a Unix epoch timestamp.
+
+MODULE 4: Groups, Channels & Forums
+This module handles scale, seamlessly transitioning from small, intimate group chats to massive, unidirectional broadcast channels accommodating millions of subscribers. The architectural challenge here lies in efficient state pruning and role-based access control.
+
+Admin Controls and Permissions
+UI/UX Vision:
+Group administrators have access to a specific "Manage Group" settings screen. The UI presents granular, animated switch toggles for user permissions: "Send Messages," "Send Media," "Add Users," and "Pin Messages." Administrators can also long-press a user in the chat list to bring up an immediate context menu to restrict or ban them.
+
+Functional Action:
+Toggling a permission immediately updates the capabilities of standard users in real time. If a user is restricted from sending media, their attachment paperclip icon is visually greyed out and functionally disabled, accompanied by a tooltip explaining the restriction if tapped.
+
+TDLib Logic & Methods:
+The architecture relies on role-based access control models parsed from the chatMember objects. A user’s capability is defined by specific enumerations:
+
+Member Status	TDLib Class	Granted Capabilities
+Administrator	chatMemberStatusAdministrator	can_edit_messages, can_delete_messages, can_restrict_members
+Restricted	chatMemberStatusRestricted	Granular toggles: can_send_messages, can_send_media_messages
+To enact a ban or restriction, the system invokes banChatMember or updates the member status directly.
+
+Topics (Forum Style Grouping)
+UI/UX Vision:
+For large supergroups (over 200 members), the standard chat view is replaced by a "Forums" view. The group acts as a master container. Inside, the UI renders a vertical list of "Topics" (e.g., #General, #Announcements, #Off-Topic). Each topic acts as an isolated chat thread with its own unread badge and pinned messages.
+
+Functional Action:
+Users tap a topic to enter a focused chat window, shielding them from the noise of the broader group. Administrators can create, delete, or close topics to prevent further replies, turning them into read-only archives.
+
+TDLib Logic & Methods:
+The group must have topics enabled via the toggleChatViewAsTopics function. Managing these sub-threads involves calls like toggleForumTopicIsClosed, toggleForumTopicIsPinned, and deleteForumTopic. TDLib handles the routing of messages to the correct message_thread_id.
+
+Pinned Messages Multi-Stack
+UI/UX Vision:
+At the top of the chat interface, just beneath the App Bar, a persistent horizontal bar displays a snippet of a pinned message. A thumbtack icon rests on the left. If multiple messages are pinned, a small vertical segmented line appears on the right border, visually indicating a stack. Tapping the bar instantly scrolls the ListView to the exact index of the pinned message, highlighting it with a brief, fading color wash.
+
+Functional Action:
+Subsequent taps on the pinned bar cycle through the stack of pinned messages in reverse chronological order. A list button on the right edge expands all pinned messages into a separate, full-screen list view for easy reading.
+
+TDLib Logic & Methods:
+The UI extracts the pinned_message_id from the chat object. Clicking the UI bar triggers a getMessage call if the message is not actively in the local Flutter cache, utilizing the local SQLite database to retrieve historical data. Administrators add to the stack by pinning without replacing, triggering toggleChatIsPinned logic specific to messages.
+
+Channel Features (Broadcasting, Subscribers, Comments)
+UI/UX Vision:
+When viewing a Channel, the traditional text input area at the bottom is entirely replaced with a "Mute" / "Unmute" toggle for subscribers, or a "Broadcast" input field for administrators. Messages display a view count (an eye icon) instead of traditional read receipts. If a message has a comment thread attached, a "Leave a Comment" button appears at the bottom of the bubble, showing the current comment count.
+
+Functional Action:
+Tapping the comment button opens a modal bottom sheet containing a separate, nested group chat specifically tied to that single broadcast message, allowing community interaction without cluttering the main broadcast feed.
+
+TDLib Logic & Methods:
+TDLib classifies a channel as a chatTypeSupergroup where the is_channel boolean is flagged true. The view counts are directly fetched from the message object properties. Comments are handled by requesting the message thread history via getMessageThreadHistory, which relies on the property can_get_message_thread == true. The comments actually live in a hidden, linked supergroup.
+
+Polls and Quizzes
+UI/UX Vision:
+Polls are rendered as interactive cards inside the chat. Unvoted polls display radio buttons (for single choice) or checkboxes (for multiple choice). Upon voting, the UI executes a fluid fill animation, extending a colored horizontal bar across the background of each option to represent the percentage of total votes. Quizzes include confetti particle effects for correct answers and a violent red shake animation for incorrect ones.
+
+Functional Action:
+Users can retract their votes if the poll is not anonymous. Quiz answers trigger a localized explanation tooltip if provided by the creator, appearing immediately after the user makes their selection.
+
+TDLib Logic & Methods:
+Polls are parsed as messagePoll entities. Submitting a vote dispatches setPollAnswer. The system differentiates between standard polls and quizzes via the type property in the poll object, tracking is_anonymous to determine whether to display participant avatars next to the vote bars.
+
+MODULE 5: Settings & Privacy
+The Settings module is a deeply structured hierarchical menu providing total command over the user's data, aesthetics, and cryptographic security boundaries.
+
+Profile Editing (Bio, Name, Animated Avatars)
+UI/UX Vision:
+The primary settings view highlights the user's avatar in a large circular crop. Tapping a floating camera icon allows the user to upload a static image, a looping video, or create an animated avatar using custom colors and emojis. Text fields for the user's Display Name and Bio are heavily stylized with underline-on-focus animations.
+
+Functional Action:
+Updating the bio instantly reflects across the network. If an animated video is uploaded, it loops silently in the profile view but pauses when scrolled off-screen in chat lists to preserve CPU cycles and battery life.
+
+TDLib Logic & Methods:
+Modifying the text fields invokes setBio and setName. Uploading a new graphic triggers setProfilePhoto. The user's primary interface theme colors are manipulated via setProfileAccentColor and setAccentColor, which sync their aesthetic preferences to their contacts' devices.
+
+Privacy & Security
+UI/UX Vision:
+A dedicated "Privacy and Security" screen offers a matrix of options: "Phone Number," "Last Seen & Online," "Profile Photo," and "Blocked Users." Each routes to a sub-menu featuring a segmented control (Everybody, My Contacts, Nobody) and an exception list (Always Share With, Never Share With). An "Active Sessions" screen displays a list of all devices logged into the account, sorted by current session and desktop/mobile categories, complete with IP addresses and location data.
+
+Functional Action:
+Users can remotely terminate rogue sessions from the Active Sessions list with a single swipe-to-delete gesture. Establishing a local passcode requires setting a PIN, which encrypts the local database at rest, securing the SQLite files from forensic extraction.
+
+TDLib Logic & Methods:
+Privacy segmented controls utilize getUserPrivacySettingRules and setUserPrivacySettingRules to map logical access layers to the remote server. Retrieving blocklists relies on getBlockedUsers. Device management requires querying getActiveSessions. To destroy a session, the system invokes terminateSession for a specific ID, or terminateAllOtherSessions as a global panic button. To encrypt the local SQLite cache, the application invokes setDatabaseEncryptionKey with a derived byte array (e.g., PBKDF2), which must subsequently be validated on boot via checkDatabaseEncryptionKey.
+
+Privacy Setting Domain	TDLib Implementation	Actionable Rule Types
+Visibility Restrictions	setUserPrivacySettingRules	Allow All, Allow Contacts, Restrict All
+Granular Exceptions	Added to Privacy Rules	allowUsers, restrictUsers
+Session Management	terminateSession	Remote JWT/Token revocation
+Database Security	setDatabaseEncryptionKey	AES-256 local SQLite encryption
+Data & Storage
+UI/UX Vision:
+The "Data and Storage" screen presents a dual-tab layout comparing Wi-Fi versus Cellular data consumption. A colorful donut chart breaks down storage usage by categories: Photos, Videos, Files, and Audio. A slider allows the user to configure the maximum cache size (e.g., 5GB, 10GB, No Limit) and an auto-clear timer (e.g., Keep Media for 1 Month).
+
+Functional Action:
+Adjusting the auto-download toggles prevents the client from fetching heavy video assets when on cellular networks, reserving bandwidth. Pressing "Clear Cache" immediately flushes the local file system without deleting the cloud copies, providing instant storage relief.
+
+TDLib Logic & Methods:
+Network restrictions are enacted by passing autoDownloadSettings to setAutoDownloadSettings. The donut chart is populated by fetching networkStatistics, which tracks byte-level ingress and egress. Clearing the cache invokes functions like removeAllFilesFromDownloads and specific database pruning methodologies targeting media directories.
+
+Appearance (Backgrounds & Themes)
+UI/UX Vision:
+The Appearance module allows users to radically alter the app's visual identity. A palette of base colors (Light, Dark, AMOLED Black) is presented alongside dynamic "Chat Backgrounds" and "Chat Bubble Colors". When choosing a background, the user can select solid colors, gradients, or complex moving patterns. A real-time preview of a mock chat is rendered on the screen.
+
+Functional Action:
+Selecting a custom color shifts the entire Material UI theme engine globally. Backgrounds featuring gradients will smoothly transition their angles based on device gyroscope data (parallax effect).
+
+TDLib Logic & Methods:
+The client maps these choices to TDLib's internal structural definitions, allowing preferences to sync across devices. Options include backgroundTypeWallpaper, backgroundTypePattern, backgroundFillSolid, and backgroundFillGradient.
+
+MODULE 6: Latest & Premium Features
+To establish a modern competitive edge, the architecture must support advanced, monetization-driven functionality, heavily relying on custom server-side parsing and premium status flags. This shifts standard messaging into a platform-centric model.
+
+Stories (Posting, Viewing, Privacy)
+UI/UX Vision:
+Tapping the "Add Story" ring at the top of the dashboard launches a full-screen camera viewport. The user can capture photos or hold to record video. Post-capture, a vertical toolbar offers text overlays, sticker placement, and freehand drawing tools. When viewing others' stories, tapping the right side of the screen skips forward, while tapping the left skips backward. A swipe up reveals the viewer list.
+
+Functional Action:
+Story privacy is decoupled from account privacy; the user selects the audience (Public, Contacts, Close Friends) immediately prior to publishing. Premium users can engage "Stealth Mode" from a long-press menu, hiding their views from others for a set duration, granting them observational anonymity.
+
+TDLib Logic & Methods:
+Media capture and rendering are handled natively in Flutter, utilizing the camera plugin. The resulting media is packaged and sent via createStoryAlbum. When the user observes a story, activeStoryStateLive events are tracked. Reactions to stories are posted utilizing addPendingLiveStoryReaction. The premium stealth feature is activated by dispatching activateStoryStealthMode.
+
+Telegram Premium Badges and Exclusive Features
+UI/UX Vision:
+Users with active Premium subscriptions display a custom star badge (or chosen emoji) adjacent to their name globally across chat lists, app bars, and message bubbles. When a Premium user receives a Voice Note, a small "A" (Voice-to-Text) button appears pinned to the bubble.
+
+Functional Action:
+Tapping the Voice-to-Text button instantly expands a shimmering loading block below the audio waveform. Within seconds, the spoken audio is transcribed into text directly inside the bubble, allowing the user to read the message in environments where audio playback is prohibited. Furthermore, Premium users unlock access to dynamic, custom animated emojis that can be injected inline within standard text, breaking out of the standard Unicode boundaries.
+
+TDLib Logic & Methods:
+The UI verifies the is_premium flag attached to the user object to selectively render premium UI elements. The transcription capability invokes the recognizeSpeech method, parsing the target message_id. TDLib responds asynchronously by updating the voiceNote object with a speech_recognition_result. The Flutter layer reacts to state changes: speechRecognitionResultPending displays the loading shimmer, speechRecognitionResultText injects the final string into the UI, and speechRecognitionResultError alerts the user to transcription failure. Inline custom emojis rely on getAnimatedEmoji to render the complex vector animations inside the text blocks.
+
+Channel Boosts and Giveaways
+UI/UX Vision:
+In the profile header of a Channel, a progress bar denotes the channel's "Level." A glowing "Boost" button encourages users to contribute their Premium boosts to the channel. Channels can also host Giveaways, which appear as highly stylized, golden-bordered message bubbles within the chat stream, displaying a countdown timer and a button to "Join."
+
+Functional Action:
+Channel levels unlock specific administrative features, such as the ability to post Stories on behalf of the channel or utilize custom background colors. Giveaways are cryptographically randomized distributions of Premium subscriptions or internal currency (Stars) to the subscriber base, driving engagement and monetization.
+
+TDLib Logic & Methods:
+The system reads the boost_level from the channel metadata. Users contribute their boosts by invoking the boostChat method. Financial integrations and Giveaways utilize advanced TDLib payment constructors, mapping to objects like starAmount, starCount, and starGiveawayPaymentOptions to facilitate the underlying blockchain or fiat transactions securely.
+
+MODULE 7: Advanced Integrations (Calls, Bots, and Web Apps)
+To make this a truly "A to Z" specification, we must include the infrastructure for real-time communication and Telegram's burgeoning Mini App ecosystem.
+
+Peer-to-Peer Voice and Video Calls
+UI/UX Vision:
+When a call is initiated or received, the UI pushes a full-screen overlay featuring a heavily blurred version of the contact's avatar. It includes standard controls: Mute, Speaker, Video Toggle, and End Call. During an active video call, the local camera view is rendered in a draggable Picture-in-Picture (PiP) window.
+
+Functional Action:
+The application establishes a secure, end-to-end encrypted WebRTC connection. If a direct peer-to-peer connection fails (due to strict NAT or firewalls), the stream seamlessly falls back to Telegram's relay servers without interrupting the user.
+
+TDLib Logic & Methods:
+Incoming calls emit events that the UI answers using acceptCall. Hanging up or rejecting an incoming call invokes discardCall.   
+
+Group Video Chats (Audio & Video Rooms)
+UI/UX Vision:
+Inside a Group or Channel, an active voice chat places a vibrant "Join" bar at the top of the chat view. Tapping it opens a persistent grid layout displaying participant avatars. Active speakers are highlighted with a pulsing green ring. Features include a "Raise Hand" button, screen sharing options, and noise suppression toggles.
+
+Functional Action:
+Users can join as listeners or speakers based on their role permissions. Administrators can selectively mute participants, force them to listen-only mode, or invite others directly into the live broadcast room.
+
+TDLib Logic & Methods:
+Administrators launch the room via createVideoChat. Users join the ongoing broadcast utilizing joinGroupCall.   
+
+Bots & Web Apps (Telegram Mini Apps)
+UI/UX Vision:
+Bots look like standard chats but feature a specialized "Menu" button next to the text input field instead of a standard keyboard. When a user interacts with a Web App (Mini App), a modal bottom sheet slides up, rendering a web view overlaying the chat. This allows users to shop, play games, or use advanced utilities without ever leaving the application.
+
+Functional Action:
+The client securely passes theme parameters (dark/light mode colors) to the web view so the Mini App perfectly matches the user's Telegram appearance settings. It also confirms data transmission warnings before launching the app.
+
+TDLib Logic & Methods:
+The UI parses messages and keyboards for inlineKeyboardButtonTypeWebApp. To launch the app, the system fetches the secure HTTPS link via getWebAppUrl and notifies the server of the interaction using openWebApp.   
+

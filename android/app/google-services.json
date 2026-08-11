@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "77625033222",
+    "project_id": "p2pchat-73b45",
+    "storage_bucket": "p2pchat-73b45.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:77625033222:android:60b4208b4c21e7518d7987",
+        "android_client_info": {
+          "package_name": "com.example"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDC4KAu7KBIDl7yPZykOvgvZfpS-52LvlE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:77625033222:android:5b100be4937ffc6d8d7987",
+        "android_client_info": {
+          "package_name": "com.newchat.nchat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDC4KAu7KBIDl7yPZykOvgvZfpS-52LvlE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

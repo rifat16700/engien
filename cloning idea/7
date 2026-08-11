@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Clone: Advanced Modules (A-Z)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        :root {
+            --bg-dark: #0a0e17;
+            --card-dark: #121826;
+            --accent-indigo: #6366f1;
+            --accent-gold: #f59e0b;
+        }
+
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            background-color: var(--bg-dark);
+            color: #e2e8f0;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .feature-card {
+            background: var(--card-dark);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent-indigo);
+            box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.2);
+        }
+
+        .method-badge {
+            background: rgba(99, 102, 241, 0.1);
+            color: #818cf8;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .indent-line {
+            border-left: 2px solid #1e293b;
+            margin-left: 0.75rem;
+            padding-left: 1.5rem;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            height: 250px;
+            margin: auto;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <header class="max-w-6xl mx-auto mb-16">
+        <div class="flex items-center gap-4 mb-4">
+            <span class="p-3 bg-indigo-600/20 text-indigo-400 rounded-2xl text-2xl">⚙️</span>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                Settings, Premium & Advanced Infrastructure
+            </h1>
+        </div>
+        <p class="text-slate-400 max-w-2xl">টেলিগ্রাম ক্লোনের সিকিউরিটি, প্রিমিয়াম ফিচার এবং ব্যাকএন্ড সিগন্যালিংয়ের একটি পূর্ণাঙ্গ "বাটন-বাই-বাটন" টেকনিক্যাল গাইড।</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto space-y-20">
+
+        <!-- MODULE 5: SETTINGS & PRIVACY -->
+        <section id="module-5">
+            <h2 class="text-2xl font-bold mb-8 flex items-center gap-3">
+                <span class="text-indigo-500">05.</span> Settings & Privacy (The Security Vault)
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Profile & Account -->
+                <div class="feature-card">
+                    <h3 class="text-lg font-bold text-indigo-300 mb-4">৫.১ প্রোফাইল এবং অ্যাকাউন্ট ম্যানেজমেন্ট</h3>
+                    <div class="space-y-4 text-sm">
+                        <div class="indent-line">
+                            <p class="font-bold">A. Edit Profile (Name/Bio):</p>
+                            <p class="text-slate-400">ইউজার তার নাম এবং বায়ো এডিট করতে পারে। বায়ো-তে সর্বোচ্চ ৭০ ক্যারেক্টার থাকে।</p>
+                            <p class="mt-1"><span class="method-badge">setName</span> <span class="method-badge">setBio</span></p>
+                        </div>
+                        <div class="indent-line">
+                            <p class="font-bold">B. Username Management:</p>
+                            <p class="text-slate-400">ইউনিক ইউজারনেম সেট করা। ইউজার টাইপ করার সময় রিয়েল-টাইমে অ্যাভেইলিবিলিটি চেক করা হয়।</p>
+                            <p class="mt-1"><span class="method-badge">setUsername</span> <span class="method-badge">checkUsername</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Privacy Settings -->
+                <div class="feature-card">
+                    <h3 class="text-lg font-bold text-indigo-300 mb-4">৫.২ প্রাইভেসি কন্ট্রোল (Privacy Matrix)</h3>
+                    <div class="space-y-4 text-sm">
+                        <div class="indent-line">
+                            <p class="font-bold">Last Seen & Online:</p>
+                            <p class="text-slate-400">কে আপনার অনলাইন স্ট্যাটাস দেখবে (Everybody, My Contacts, Nobody)।</p>
+                            <p class="mt-1"><span class="method-badge">getUserPrivacySettingRules</span></p>
+                        </div>
+                        <div class="indent-line">
+                            <p class="font-bold">Passcode Lock:</p>
+                            <p class="text-slate-400">অ্যাপ ওপেন করার সময় পিন বা বায়োমেট্রিক লক। এটি লোকাল এনক্রিপশন লজিক।</p>
+                            <p class="mt-1"><span class="method-badge">local_passcode_storage</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security & Sessions -->
+                <div class="feature-card col-span-1 md:col-span-2">
+                    <h3 class="text-lg font-bold text-indigo-300 mb-4">৫.৩ টু-স্টেপ ভেরিফিকেশন এবং সেশন ম্যানেজমেন্ট</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="p-4 bg-black/20 rounded-xl">
+                            <p class="font-bold mb-2">Active Sessions (Devices):</p>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                বর্তমানে আপনার অ্যাকাউন্টটি কোন কোন ডিভাইসে লগইন করা আছে তার লিস্ট (IP Address, Location, Device Model)। ইউজার চাইলে যেকোনো সেশন রিমোটলি ডিলিট করতে পারে।
+                            </p>
+                            <div class="mt-3 flex gap-2">
+                                <span class="method-badge">getActiveSessions</span>
+                                <span class="method-badge">terminateSession</span>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-black/20 rounded-xl">
+                            <p class="font-bold mb-2">Two-Step Verification (2FA):</p>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                নতুন ডিভাইসে লগইন করার সময় এসএমএস কোড ছাড়াও একটি ক্লাউড পাসওয়ার্ড লাগবে। পাসওয়ার্ড ভুলে গেলে রিকভারি ইমেইল লজিক।
+                            </p>
+                            <div class="mt-3 flex gap-2">
+                                <span class="method-badge">setPassword</span>
+                                <span class="method-badge">getPasswordState</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 6: STORIES & PREMIUM -->
+        <section id="module-6">
+            <div class="flex items-center gap-3 mb-8">
+                <span class="p-2 bg-amber-500/20 text-amber-500 rounded-xl text-xl">⭐</span>
+                <h2 class="text-2xl font-bold">Module 6: Stories & Premium Experience</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+                <div class="space-y-6">
+                    <div class="feature-card border-amber-500/30">
+                        <h3 class="text-lg font-bold text-amber-400 mb-4">৬.১ টেলিগ্রাম স্টোরিজ (Stories UI/UX)</h3>
+                        <ul class="space-y-4 text-sm">
+                            <li class="flex items-start gap-3">
+                                <span class="text-amber-500 mt-1">●</span>
+                                <div>
+                                    <strong>Posting Story:</strong> ক্যামেরা ইন্টারফেস থেকে ছবি বা ভিডিও তোলা। ক্যাপশন যোগ করা এবং কতক্ষণ থাকবে (৬, ১২, ২৪, ৪৮ ঘণ্টা) তা সেট করা।
+                                    <p class="mt-1"><span class="method-badge">postStory</span> <span class="method-badge">getStoryAvailablePeriods</span></p>
+                                </div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-amber-500 mt-1">●</span>
+                                <div>
+                                    <strong>Viewing & Reactions:</strong> ফুল-স্ক্রিন স্টোরি ভিউ। নিচে কুইক রিঅ্যাকশন বাটন এবং ভিউয়ার লিস্ট (শুধুমাত্র নিজের স্টোরির জন্য)।
+                                    <p class="mt-1"><span class="method-badge">getStories</span> <span class="method-badge">getStoryViewers</span></p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h3 class="text-lg font-bold text-indigo-300 mb-4">৬.২ প্রিমিয়াম সাবস্ক্রিপশন ফিচার</h3>
+                        <div class="grid grid-cols-2 gap-4 text-[11px] uppercase tracking-wider">
+                            <div class="p-3 bg-indigo-900/10 border border-indigo-500/20 rounded-lg text-center">Voice-to-Text</div>
+                            <div class="p-3 bg-indigo-900/10 border border-indigo-500/20 rounded-lg text-center">Custom Emojis</div>
+                            <div class="p-3 bg-indigo-900/10 border border-indigo-500/20 rounded-lg text-center">4GB File Limit</div>
+                            <div class="p-3 bg-indigo-900/10 border border-indigo-500/20 rounded-lg text-center">Premium Badge</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 p-6 rounded-3xl border border-slate-800">
+                    <h4 class="text-center text-xs font-bold text-slate-500 uppercase mb-6">User Interest Data (Premium Potential)</h4>
+                    <div class="chart-container">
+                        <canvas id="premiumChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 7: CALLS & SIGNALING -->
+        <section id="module-7" class="pb-20">
+            <h2 class="text-2xl font-bold mb-8 flex items-center gap-3">
+                <span class="text-green-500">07.</span> Calls & Signaling (VoIP Engine)
+            </h2>
+
+            <div class="feature-card">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Call Logic -->
+                    <div class="md:col-span-1 space-y-6">
+                        <div class="p-4 bg-green-900/10 rounded-2xl border border-green-500/20">
+                            <h4 class="font-bold text-green-400 mb-2">সিগন্যালিং স্টেজ (The Flow):</h4>
+                            <ul class="text-xs space-y-3 text-slate-400">
+                                <li class="flex items-center gap-2"><span class="w-2 h-2 bg-blue-500 rounded-full"></span> 1. <strong>Calling:</strong> <code class="mono">createCall</code></li>
+                                <li class="flex items-center gap-2"><span class="w-2 h-2 bg-yellow-500 rounded-full"></span> 2. <strong>Ringing:</strong> <code class="mono">UpdateCall</code></li>
+                                <li class="flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full"></span> 3. <strong>Connected:</strong> <code class="mono">acceptCall</code></li>
+                                <li class="flex items-center gap-2"><span class="w-2 h-2 bg-red-500 rounded-full"></span> 4. <strong>Hang up:</strong> <code class="mono">discardCall</code></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Call UI Description -->
+                    <div class="md:col-span-2">
+                        <h4 class="font-bold mb-4">UI/UX ভিশন: ভয়েস এবং ভিডিও কল স্ক্রিন</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="indent-line">
+                                <p class="text-sm font-bold text-indigo-300">ভয়েস কল স্ক্রিন:</p>
+                                <p class="text-xs text-slate-400 leading-relaxed mt-2">
+                                    ফুল-স্ক্রিন ব্লার ব্যাকগ্রাউন্ড (ইউজার এভাটার থেকে জেনারেটেড)। মাঝখানে বড় এভাটার এবং অ্যানিমেটেড পালস ইফেক্ট। নিচে মিউট, স্পিকার এবং এন্ড কল বাটন।
+                                </p>
+                            </div>
+                            <div class="indent-line">
+                                <p class="text-sm font-bold text-indigo-300">ভিডিও কল ইন্টারফেস:</p>
+                                <p class="text-xs text-slate-400 leading-relaxed mt-2">
+                                    সামনের ক্যামেরার প্রিভিউ (Floating window)। পেছনের ক্যামেরার মেইন ফিড। ভিডিও টগল করার অপশন এবং ক্যামেরা ফ্লিপ বাটন।
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Technical Note -->
+                        <div class="mt-8 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                            <p class="text-[11px] text-slate-400 italic">
+                                <strong>প্রযুক্তিগত নোট:</strong> টেলিগ্রাম ক্লোনে কলের জন্য TDLib মূলত সিগন্যালিং হ্যান্ডেল করে। একচুয়াল ভয়েস/ভিডিও ডাটা ট্রান্সফার করার জন্য <strong>WebRTC</strong> অথবা টেলিগ্রামের নিজস্ব <strong>libtgvoip</strong> লাইব্রেরি ব্যবহার করতে হয়।
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FINAL FOOTER -->
+    <footer class="max-w-6xl mx-auto border-t border-slate-800 pt-12 pb-20 text-center">
+        <h3 class="text-xl font-bold mb-4">A-Z আর্কিটেকচারাল রিসার্চ সম্পন্ন হয়েছে।</h3>
+        <p class="text-slate-500 text-sm max-w-xl mx-auto">
+            এই ব্লুপ্রিন্টটি এখন আপনার কাছে একটি পূর্ণাঙ্গ টেকনিক্যাল ম্যাপ হিসেবে আছে। এর প্রতিটি সেকশন, বাটন এবং ব্যাকএন্ড লজিক আপনার টিমকে একটি প্রোডাকশন-গ্রেড অ্যাপ তৈরিতে সহায়তা করবে।
+        </p>
+        <div class="mt-10 flex justify-center gap-4">
+            <div class="px-6 py-3 bg-indigo-600 rounded-full font-bold text-sm cursor-pointer hover:bg-indigo-500">Download Blueprint (PDF)</div>
+            <div class="px-6 py-3 bg-slate-800 rounded-full font-bold text-sm cursor-pointer hover:bg-slate-700">Go to Module 1</div>
+        </div>
+    </footer>
+
+    <script>
+        // Premium Potential Distribution Chart
+        const ctx = document.getElementById('premiumChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Storage', 'Emoji', 'Speed', 'Stories', 'Voice-to-Text'],
+                datasets: [{
+                    label: 'User Interest %',
+                    data: [85, 65, 90, 75, 40],
+                    backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                    borderColor: '#6366f1',
+                    borderWidth: 1,
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

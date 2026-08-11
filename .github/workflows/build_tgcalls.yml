@@ -1,0 +1,59 @@
+name: Build Native tgcalls
+
+on:
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl python3 python3-pip ninja-build cmake gcc g++
+          
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
+          
+      - name: Fetch Google depot_tools
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
+          
+      - name: Fetch WebRTC for Android
+        run: |
+          mkdir webrtc_checkout
+          cd webrtc_checkout
+          fetch --nohooks webrtc_android
+          gclient sync
+          
+      - name: Clone tgcalls
+        run: |
+          git clone https://github.com/TelegramMessenger/tgcalls.git official_tgcalls
+          
+      - name: Build tgcalls using CMake
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          cd official_tgcalls
+          mkdir build && cd build
+          cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+                -DANDROID_ABI=arm64-v8a \
+                -DANDROID_PLATFORM=android-24 ..
+          make -j$(nproc)
+          
+      - name: Upload Compiled Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgcalls-android-arm64
+          path: |
+            official_tgcalls/build/**/*.so
+            webrtc_checkout/src/out/**/*.so
+            webrtc_checkout/src/**/*.h
