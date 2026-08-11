@@ -38,11 +38,60 @@ jobs:
         run: |
           git clone https://github.com/TelegramMessenger/tgcalls.git official_tgcalls
           
-      - name: Build tgcalls using CMake
+      - name: Build WebRTC
+        run: |
+          cd webrtc_checkout/src
+          gn gen out/Release --args='target_os="android" target_cpu="arm64" is_debug=false rtc_include_tests=false rtc_build_examples=false'
+          ninja -C out/Release webrtc
+          
+      - name: Setup JNI Build
+        run: |
+          # Copy tgcalls into our JNI folder
+          cp -r official_tgcalls example/android/app/src/main/cpp/tgcalls
+          
+          # Create a custom CMakeLists.txt for the JNI build that uses the WebRTC source tree
+          cat << 'EOF' > example/android/app/src/main/cpp/CMakeLists.txt
+          cmake_minimum_required(VERSION 3.10.2)
+          project("custom_tgcalls")
+
+          # Include tgcalls source files
+          file(GLOB_RECURSE TGCALLS_SRC "tgcalls/tgcalls/*.cpp" "tgcalls/tgcalls/*.c")
+
+          # Create our custom shared library containing the JNI wrapper and tgcalls source
+          add_library(
+                  custom_tgcalls
+                  SHARED
+                  tgcalls_jni.cpp
+                  ${TGCALLS_SRC}
+          )
+
+          # Find Android libraries
+          find_library(log-lib log)
+          find_library(android-lib android)
+
+          # Include directories for WebRTC and tgcalls
+          target_include_directories(custom_tgcalls PRIVATE
+                  ${CMAKE_CURRENT_SOURCE_DIR}/tgcalls
+                  ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../webrtc_checkout/src
+                  ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../webrtc_checkout/src/third_party/abseil-cpp
+          )
+
+          # Link against WebRTC static library
+          target_link_libraries(
+                  custom_tgcalls
+                  ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../webrtc_checkout/src/out/Release/obj/libwebrtc.a
+                  ${log-lib}
+                  ${android-lib}
+          )
+
+          target_compile_features(custom_tgcalls PUBLIC cxx_std_17)
+          EOF
+
+      - name: Build tgcalls JNI using CMake
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          cd official_tgcalls
+          cd example/android/app/src/main/cpp
           mkdir build && cd build
           cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
                 -DANDROID_ABI=arm64-v8a \
@@ -54,6 +103,5 @@ jobs:
         with:
           name: tgcalls-android-arm64
           path: |
-            official_tgcalls/build/**/*.so
-            webrtc_checkout/src/out/**/*.so
-            webrtc_checkout/src/**/*.h
+            example/android/app/src/main/cpp/build/**/*.so
+            webrtc_checkout/src/out/Release/obj/libwebrtc.a
