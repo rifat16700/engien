@@ -22,6 +22,17 @@ jobs:
         with:
           ndk-version: r26b
           
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Fetch Google depot_tools
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
@@ -41,8 +52,8 @@ jobs:
       - name: Build WebRTC
         run: |
           cd webrtc_checkout/src
-          gn gen out/Release --args='target_os="android" target_cpu="arm64" is_debug=false rtc_include_tests=false rtc_build_examples=false'
-          ninja -C out/Release webrtc
+          gn gen out/Release --args='target_os="android" target_cpu="arm64" is_debug=false rtc_include_tests=false rtc_build_examples=false android_static_analysis="off" treat_warnings_as_errors=false use_goma=false'
+          ninja -j 4 -C out/Release webrtc
           
       - name: Setup JNI Build
         run: |
