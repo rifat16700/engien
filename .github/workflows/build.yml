@@ -132,17 +132,24 @@ jobs:
         target_compile_features(custom_tgcalls PUBLIC cxx_std_17)
         EOF
 
-    - name: Compile JNI via Gradle
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.0' # Using a stable 3.x version
+        channel: 'stable'
+
+    - name: Install Flutter dependencies
+      run: flutter pub get
+
+    - name: Build Flutter App and JNI
       run: |
-        cd android
-        chmod +x ./gradlew
-        ./gradlew assembleDebug
+        flutter build apk --debug
         
     - name: Extract and Collect .so files
       run: |
         mkdir -p telegram_tgcalls_so_files
-        # Find all generated libcustom_tgcalls.so files and copy them to our artifact folder, preserving ABI structure
-        find android/app/build -name "libcustom_tgcalls.so" -exec bash -c '
+        # Find all generated libcustom_tgcalls.so files in the flutter build directory
+        find build -name "libcustom_tgcalls.so" -exec bash -c '
           for file; do
             abi=$(basename "$(dirname "$file")")
             mkdir -p "telegram_tgcalls_so_files/$abi"
@@ -155,4 +162,11 @@ jobs:
       with:
         name: Official-Telegram-JNI-Libraries
         path: telegram_tgcalls_so_files/
+        retention-days: 7
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Original-Flutter-App-APK
+        path: build/app/outputs/flutter-apk/app-debug.apk
         retention-days: 7
