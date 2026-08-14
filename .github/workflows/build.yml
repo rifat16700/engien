@@ -132,8 +132,27 @@ jobs:
         target_compile_features(custom_tgcalls PUBLIC cxx_std_17)
         EOF
 
-    - name: Compile JNI
+    - name: Compile JNI via Gradle
       run: |
-        # Optional: Actually trigger CMake or Gradle build here
-        # cd example/android && ./gradlew assembleDebug
-        echo "CI/CD setup complete."
+        cd example/android
+        chmod +x ./gradlew
+        ./gradlew assembleDebug
+        
+    - name: Extract and Collect .so files
+      run: |
+        mkdir -p telegram_tgcalls_so_files
+        # Find all generated libcustom_tgcalls.so files and copy them to our artifact folder, preserving ABI structure
+        find example/android/app/build -name "libcustom_tgcalls.so" -exec bash -c '
+          for file; do
+            abi=$(basename "$(dirname "$file")")
+            mkdir -p "telegram_tgcalls_so_files/$abi"
+            cp "$file" "telegram_tgcalls_so_files/$abi/"
+          done
+        ' _ {} +
+
+    - name: Upload .so Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Official-Telegram-JNI-Libraries
+        path: telegram_tgcalls_so_files/
+        retention-days: 7
