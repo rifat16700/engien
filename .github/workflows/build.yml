@@ -135,7 +135,7 @@ jobs:
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.0' # Using 3.24.0 to meet tdlib_example's >=3.22.0 requirement
+        flutter-version: '3.27.0' # Using 3.27.0 because the intl package requires Dart 3.6.0
         channel: 'stable'
 
     - name: Install Flutter dependencies
