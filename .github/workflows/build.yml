@@ -55,23 +55,23 @@ jobs:
         autoninja -C ../../out/Release webrtc
         
         # Copy built WebRTC libraries to the project's expected structure
-        mkdir -p ../../example/android/app/src/main/cpp/libs/webrtc/jni/arm64-v8a
+        mkdir -p ../../android/app/src/main/cpp/libs/webrtc/jni/arm64-v8a
         # In a real scenario, you'd copy the generated .so file from out/Release to libs/webrtc/jni
-        # find ../../out/Release -name "libjingle_peerconnection_so.so" -exec cp {} ../../example/android/app/src/main/cpp/libs/webrtc/jni/arm64-v8a/ \;
+        # find ../../out/Release -name "libjingle_peerconnection_so.so" -exec cp {} ../../android/app/src/main/cpp/libs/webrtc/jni/arm64-v8a/ \;
 
     - name: Fetch Official Telegram JNI
       run: |
-        mkdir -p example/android/app/src/main/cpp/tgcalls
+        mkdir -p android/app/src/main/cpp/tgcalls
         git clone --depth 1 https://github.com/DrKLO/Telegram.git
-        cp -r Telegram/TMessagesProj/jni/voip/* example/android/app/src/main/cpp/tgcalls/
+        cp -r Telegram/TMessagesProj/jni/voip/* android/app/src/main/cpp/tgcalls/
         rm -rf Telegram
         
         # Remove local dummy JNI
-        rm -f example/android/app/src/main/cpp/tgcalls_jni.cpp
+        rm -f android/app/src/main/cpp/tgcalls_jni.cpp
 
     - name: Dynamic JNI Signature Injection
       run: |
-        cd example/android/app/src/main/cpp/tgcalls
+        cd android/app/src/main/cpp/tgcalls
         
         # Replace the VoIPController signature dynamically (underscore format)
         find . -type f -name "*.cpp" -exec sed -i 's/org_telegram_messenger_voip_VoIPController/com_newchat_nchat_VoIPController/g' {} +
@@ -89,7 +89,7 @@ jobs:
 
     - name: Update CMakeLists.txt
       run: |
-        cat << 'EOF' > example/android/app/src/main/cpp/CMakeLists.txt
+        cat << 'EOF' > android/app/src/main/cpp/CMakeLists.txt
         cmake_minimum_required(VERSION 3.10.2)
         
         project("custom_tgcalls")
@@ -134,7 +134,7 @@ jobs:
 
     - name: Compile JNI via Gradle
       run: |
-        cd example/android
+        cd android
         chmod +x ./gradlew
         ./gradlew assembleDebug
         
@@ -142,7 +142,7 @@ jobs:
       run: |
         mkdir -p telegram_tgcalls_so_files
         # Find all generated libcustom_tgcalls.so files and copy them to our artifact folder, preserving ABI structure
-        find example/android/app/build -name "libcustom_tgcalls.so" -exec bash -c '
+        find android/app/build -name "libcustom_tgcalls.so" -exec bash -c '
           for file; do
             abi=$(basename "$(dirname "$file")")
             mkdir -p "telegram_tgcalls_so_files/$abi"
