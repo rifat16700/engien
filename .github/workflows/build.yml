@@ -51,7 +51,7 @@ jobs:
       run: |
         export PATH="${GITHUB_WORKSPACE}/depot_tools:$PATH"
         cd webrtc_checkout/src
-        gn gen ../../out/Release --args='target_os="android" target_cpu="arm64" is_debug=false rtc_include_tests=false enable_build_server=false android_static_analysis=false'
+        gn gen ../../out/Release --args='target_os="android" target_cpu="arm64" is_debug=false rtc_include_tests=false enable_build_server=false android_static_analysis="off"'
         autoninja -C ../../out/Release webrtc
         
         # Copy built WebRTC libraries to the project's expected structure
