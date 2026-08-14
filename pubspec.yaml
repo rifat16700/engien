@@ -14,51 +14,51 @@ dependencies:
   tdlib: ^1.6.0
 
   # State Management
-  flutter_riverpod: ^2.5.1
-  riverpod_annotation: ^2.3.5
+  flutter_riverpod: any
+  riverpod_annotation: any
 
   # Navigation
-  go_router: ^14.2.7
+  go_router: any
 
   # Storage & Files
-  path_provider: ^2.1.6
-  path: ^1.9.0
-  shared_preferences: ^2.3.2
+  path_provider: any
+  path: any
+  shared_preferences: any
 
   # Audio — PTT & Voice Notes
-  record: ^7.1.1
-  just_audio: ^0.9.46
-  audio_session: ^0.1.25
+  record: any
+  just_audio: any
+  audio_session: any
 
   # Background Service (Walkie-Talkie)
-  flutter_background_service: ^5.0.10
-  flutter_local_notifications: ^18.0.1
+  flutter_background_service: any
+  flutter_local_notifications: any
 
   # Files & Media
-  file_picker: ^8.1.6
-  image_picker: ^1.1.2
-  cached_network_image: ^3.4.1
-  photo_view: ^0.15.0
-  open_filex: ^4.4.0
+  file_picker: any
+  image_picker: any
+  cached_network_image: any
+  photo_view: any
+  open_filex: any
 
   # Utilities
-  uuid: ^4.4.0
-  intl: ^0.19.0
-  shimmer: ^3.0.0
-  collection: ^1.18.0
-  equatable: ^2.0.5
+  uuid: any
+  intl: any
+  shimmer: any
+  collection: any
+  equatable: any
 
   # UI
-  flutter_svg: ^2.0.10+1
-  google_fonts: ^6.2.1
+  flutter_svg: any
+  google_fonts: any
 
-  cupertino_icons: ^1.0.8
+  cupertino_icons: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  riverpod_generator: ^2.4.3
-  build_runner: ^2.4.13
+  flutter_lints: any
+  riverpod_generator: any
+  build_runner: any
 
 flutter:
   uses-material-design: true
