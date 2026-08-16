@@ -1,0 +1,7 @@
+- [ ] Implement local JSON caching logic in `TdChatProvider`
+- [ ] Add `loadFromCache` and `saveToCache` with debouncing
+- [ ] Update `main.dart` to load cache before `runApp`
+- [ ] Refactor `TdLibService` to skip full reload if cache exists
+- [ ] Optimize `ChatScreen` to show cached messages instantly and fetch only new history
+- [ ] Fix white screen transition in `RootScreen`
+- [ ] Verify instant loading and offline persistence

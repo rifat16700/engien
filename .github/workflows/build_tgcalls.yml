@@ -4,7 +4,7 @@ on:
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
     
     steps:
@@ -32,6 +32,12 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
+
+      - name: Brutal Git Auth Bypass
+        run: |
+          echo "machine github.com login git password dummy" > ~/.netrc
+          git config --global core.askPass /bin/true
+          export GIT_TERMINAL_PROMPT=0
 
       - name: Fetch Google depot_tools
         run: |
